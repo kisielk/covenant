@@ -14,25 +14,33 @@ class PostconditionViolation(ContractViolationError):
 class ClassInvariantViolation(ContractViolationError):
     pass
 
-def post(func):
-    """Postcondition decorator generator."""
-    pass
-
 def invariant(func):
     """Class invariant decorator generator."""
     pass
 
-def pre(check, imports=None):
+def post(check, imports=None):
+    """Postcondition decorator generator."""
     if not imports:
         imports = {}
     def deco(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if hasattr(func, "_covenant_base_func"):
-                spec = inspect.getargspec(func._covenant_base_func)
-            else:
-                spec = inspect.getargspec(func)
+            return func(*args, **kwargs)
+        return wrapper
+    return deco
+
+def pre(check, imports=None):
+    if not imports:
+        imports = {}
+    def deco(func):
+        if hasattr(func, "_covenant_base_func"):
+            base_func = func._covenant_base_func
+        else:
+            base_func = func
+        @wraps(func)
+        def wrapper(*args, **kwargs):
             callargs = {}
+            spec = inspect.getargspec(base_func)
             # Set defaults
             if spec.defaults:
                 for arg, default in itertools.izip(reversed(spec.args), 
@@ -49,6 +57,6 @@ def pre(check, imports=None):
                 raise PreconditionViolation("Precondition {0} not met.".format(check))
             # Call the actual function
             return func(*args, **kwargs)
-        wrapper._covenant_base_func = func
+        wrapper._covenant_base_func = base_func
         return wrapper
     return deco

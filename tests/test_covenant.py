@@ -30,6 +30,14 @@ class PreconditionTests(unittest.TestCase):
         self.assertRaises(PreconditionViolation, foo, 4, 3)
         self.assertRaises(PreconditionViolation, foo, 10, 2)
 
+    def test_three_preconditions(self):
+        @pre("x > 0")
+        @pre("x < 10")
+        @pre("x % 2 == 0")
+        def foo(x):
+             return x
+        self.assertEqual(foo(4), 4)
+
     def test_imports(self):
         def validate(x):
             return x > 5
