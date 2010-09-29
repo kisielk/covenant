@@ -2,7 +2,7 @@ from covenant import *
 import unittest2 as unittest
 
 class PreconditionTests(unittest.TestCase):
-    def test_single_precondition(self):
+    def test_one_precondition(self):
         @pre("x > 5")
         def foo(x):
             return x
