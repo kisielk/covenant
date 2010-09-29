@@ -26,7 +26,11 @@ def pre(check):
     def deco(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            spec = inspect.getargspec(func)
+            if hasattr(func, "_covenant_base_func"):
+                spec = inspect.getargspec(func._covenant_base_func)
+            else:
+                spec = inspect.getargspec(func)
+
             callargs = {}
             # Set defaults
             if spec.defaults:
@@ -43,5 +47,6 @@ def pre(check):
                 raise PreconditionViolation("Precondition {0} not met.".format(check))
             # Call the actual function
             return func(*args, **kwargs)
+        wrapper._covenant_base_func = func
         return wrapper
     return deco

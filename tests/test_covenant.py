@@ -1,4 +1,5 @@
 from covenant import *
+import inspect
 import unittest2 as unittest
 
 class PreconditionTests(unittest.TestCase):
@@ -6,7 +7,7 @@ class PreconditionTests(unittest.TestCase):
         @pre("x > 5")
         def foo(x):
             return x
-
+        self.assertEqual(foo.__name__, "foo")
         self.assertEqual(foo(6), 6)
         self.assertRaises(PreconditionViolation, foo, 5)
 
@@ -15,5 +16,7 @@ class PreconditionTests(unittest.TestCase):
         @pre("x > 3")
         def foo(x):
             return x
-
+        self.assertEqual(foo.__name__, "foo") 
         self.assertEqual(foo(5), 5)
+        self.assertRaises(PreconditionViolation, foo, 2)
+        self.assertRaises(PreconditionViolation, foo, 11)
