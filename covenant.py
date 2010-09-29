@@ -1,21 +1,18 @@
+import inspect
+from functools import wraps
+import itertools
 
-def ContractViolation(Exception):
+class ContractViolationError(Exception):
     pass
 
-def PreconditionViolation(ContractViolationError):
+class PreconditionViolation(ContractViolationError):
     pass
 
-def PostconditionViolation(ContractViolationError):
+class PostconditionViolation(ContractViolationError):
     pass
 
-def ClassInvariantViolation(ContractViolationError):
+class ClassInvariantViolation(ContractViolationError):
     pass
-
-def pre(args):
-    """Precondition decorator generator."""
-    def _dec(func):
-        return func
-    return _dec
 
 def post(func):
     """Postcondition decorator generator."""
@@ -25,6 +22,26 @@ def invariant(func):
     """Class invariant decorator generator."""
     pass
 
-def arg(name):
-    """Something something to an arg."""
-    pass
+def pre(check):
+    def deco(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            spec = inspect.getargspec(func)
+            callargs = {}
+            # Set defaults
+            if spec.defaults:
+                for arg, default in itertools.izip(reversed(spec.args), 
+                                                reversed(spec.defaults)):
+                    callargs[arg] = default
+            # Populate from passed args
+            for a1, a2 in itertools.izip(spec.args, args):
+                callargs[a1] = a2
+            # Update with kwargs
+            callargs.update(kwargs)
+            # Eval the check
+            if not eval(check, None, callargs):
+                raise PreconditionViolation("Precondition {0} not met.".format(check))
+            # Call the actual function
+            return func(*args, **kwargs)
+        return wrapper
+    return deco
