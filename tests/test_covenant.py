@@ -46,3 +46,47 @@ class PreconditionTests(unittest.TestCase):
             return x
         self.assertEqual(foo(6), 6)
         self.assertRaises(PreconditionViolation, foo, 5)
+
+class PostconditionTest(unittest.TestCase):
+    def test_one_postcondition(self):
+        @post("_c == 5")
+        def foo():
+            return 5
+        self.assertEqual(foo.__name__, "foo")
+        self.assertEqual(foo(), 5)
+
+    def test_failed_postcondition(self):
+        @post("_c == 5")
+        def foo():
+            return 6
+        self.assertRaises(PostconditionViolation, foo)
+
+    def test_with_arg(self):
+        @post("_c == a*2")
+        def foo(a):
+            return a*2
+        self.assertEqual(foo(2), 4)
+
+    def test_two_postconditions(self):
+        @post("_c == a*2")
+        @post("_c % 2 == 0")
+        def foo(a):
+            return a*2
+        self.assertEqual(foo(2), 4)
+
+    def test_three_postconditions(self):
+        @post("_c == a*2")
+        @post("_c % 2 == 0")
+        @post("True")
+        def foo(a):
+            return a*2
+        self.assertEqual(foo(2), 4)
+
+class PostAndPreconditionTests(unittest.TestCase):
+    def test_post_and_pre(self):
+        @post("_c == a*2")
+        @pre("a > 1")
+        def foo(a):
+            return a*2
+        self.assertEqual(foo(2), 4)
+        self.assertRaises(PreconditionViolation, foo, 1)
