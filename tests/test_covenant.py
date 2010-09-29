@@ -20,3 +20,12 @@ class PreconditionTests(unittest.TestCase):
         self.assertEqual(foo(5), 5)
         self.assertRaises(PreconditionViolation, foo, 2)
         self.assertRaises(PreconditionViolation, foo, 11)
+
+    def test_two_arguments(self):
+        @pre("x % y == 0")
+        @pre("x < 8")
+        def foo(x, y):
+            return x / y
+        self.assertEqual(foo(4,2), 2)
+        self.assertRaises(PreconditionViolation, foo, 4, 3)
+        self.assertRaises(PreconditionViolation, foo, 10, 2)
