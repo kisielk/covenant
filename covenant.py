@@ -22,7 +22,9 @@ def invariant(func):
     """Class invariant decorator generator."""
     pass
 
-def pre(check):
+def pre(check, imports=None):
+    if not imports:
+        imports = {}
     def deco(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -30,7 +32,6 @@ def pre(check):
                 spec = inspect.getargspec(func._covenant_base_func)
             else:
                 spec = inspect.getargspec(func)
-
             callargs = {}
             # Set defaults
             if spec.defaults:
@@ -40,10 +41,11 @@ def pre(check):
             # Populate from passed args
             for a1, a2 in itertools.izip(spec.args, args):
                 callargs[a1] = a2
-            # Update with kwargs
+            # Update with kwargs and provided imports
             callargs.update(kwargs)
+            callargs.update(imports)
             # Eval the check
-            if not eval(check, None, callargs):
+            if not eval(check, callargs, None):
                 raise PreconditionViolation("Precondition {0} not met.".format(check))
             # Call the actual function
             return func(*args, **kwargs)
