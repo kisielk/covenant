@@ -1,6 +1,7 @@
+import sys
+import unittest2 as unittest
 from covenant import *
 import inspect
-import unittest2 as unittest
 
 class PreconditionTests(unittest.TestCase):
     def test_one_precondition(self):
@@ -9,7 +10,8 @@ class PreconditionTests(unittest.TestCase):
             return x
         self.assertEqual(foo.__name__, "foo")
         self.assertEqual(foo(6), 6)
-        self.assertRaises(PreconditionViolation, foo, 5)
+        with self.assertRaises(PreconditionViolation):
+            foo(5)
 
     def test_two_preconditions(self):
         @pre("x < 10")
@@ -18,8 +20,10 @@ class PreconditionTests(unittest.TestCase):
             return x
         self.assertEqual(foo.__name__, "foo") 
         self.assertEqual(foo(5), 5)
-        self.assertRaises(PreconditionViolation, foo, 2)
-        self.assertRaises(PreconditionViolation, foo, 11)
+        with self.assertRaises(PreconditionViolation):
+            foo(2)
+        with self.assertRaises(PreconditionViolation):
+            foo(11)
 
     def test_two_arguments(self):
         @pre("x % y == 0")
@@ -27,8 +31,10 @@ class PreconditionTests(unittest.TestCase):
         def foo(x, y):
             return x / y
         self.assertEqual(foo(4,2), 2)
-        self.assertRaises(PreconditionViolation, foo, 4, 3)
-        self.assertRaises(PreconditionViolation, foo, 10, 2)
+        with self.assertRaises(PreconditionViolation):
+            foo(4, 3)
+        with self.assertRaises(PreconditionViolation):
+            foo(10, 2)
 
     def test_three_preconditions(self):
         @pre("x > 0")
@@ -45,7 +51,8 @@ class PreconditionTests(unittest.TestCase):
         def foo(x):
             return x
         self.assertEqual(foo(6), 6)
-        self.assertRaises(PreconditionViolation, foo, 5)
+        with self.assertRaises(PreconditionViolation):
+            foo(5)
 
 class PostconditionTest(unittest.TestCase):
     def test_one_postcondition(self):
@@ -59,7 +66,8 @@ class PostconditionTest(unittest.TestCase):
         @post("_c == 5")
         def foo():
             return 6
-        self.assertRaises(PostconditionViolation, foo)
+        with self.assertRaises(PostconditionViolation):
+            foo()
 
     def test_with_arg(self):
         @post("_c == a*2")
@@ -89,4 +97,5 @@ class PostAndPreconditionTests(unittest.TestCase):
         def foo(a):
             return a*2
         self.assertEqual(foo(2), 4)
-        self.assertRaises(PreconditionViolation, foo, 1)
+        with self.assertRaises(PreconditionViolation):
+            foo(1)
