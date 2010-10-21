@@ -54,6 +54,14 @@ class PreconditionTests(unittest.TestCase):
         with self.assertRaises(PreconditionViolation):
             foo(5)
 
+    def test_args(self):
+        @pre("len(args) > 1")
+        def foo(*args):
+            return len(args)
+        self.assertEqual(foo(1,2), 2)
+        with self.assertRaises(PreconditionViolation):
+            foo(1)
+
 class PostconditionTest(unittest.TestCase):
     def test_one_postcondition(self):
         @post("_c == 5")
