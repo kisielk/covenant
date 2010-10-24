@@ -1,6 +1,7 @@
 from inspect import getargspec, ismethod
 from functools import wraps
-import itertools
+from collections import namedtuple
+import sys
 
 class ContractViolationError(Exception):
     pass
@@ -102,47 +103,58 @@ def getcallargs(func, *positional, **named):
             'arguments' if num_required > 1 else 'argument', num_total))
     return arg2value
 
-def pre(condition, imports=None):
-    if not imports:
-        imports = {}
-    def deco(func):
-        if hasattr(func, "_covenant_base_func"):
-            base_func = func._covenant_base_func
-        else:
-            base_func = func
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            callargs = getcallargs(base_func, *args, **kwargs)
-            callargs.update(imports)
-            # Eval the condition
-            if not eval(condition, callargs, None):
-                raise PreconditionViolation("Precondition {0} not met.".format(condition))
-            # Call the actual function
-            return func(*args, **kwargs)
-        wrapper._covenant_base_func = base_func
-        return wrapper
-    return deco
+Condition = namedtuple("Condition", "statement, imports")
+
+def create_wrapper(func, pre=None, post=None):
+    """Create a wrapper for func that will check the conditions given in pre and post."""
+    if not pre:
+        pre = []
+    if not post:
+        post = []
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return check_conditions(func=func, pre=pre, post=post, args=args, kwargs=kwargs)
+    wrapper._covenant_pre = pre
+    wrapper._covenant_post = post
+    wrapper._covenant_base_func = func
+    return wrapper
 
 def post(condition, imports=None):
     if not imports:
         imports = {}
     def deco(func):
+        postcondition = Condition(condition, imports)
         if hasattr(func, "_covenant_base_func"):
-            base_func = func._covenant_base_func
+            func._covenant_post.append(postcondition)
+            return func
         else:
-            base_func = func
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            callargs = getcallargs(base_func, *args, **kwargs)
-            callargs.update(imports)
-            # Call the actual function
-            rval = func(*args, **kwargs)
-            # Eval the condition
-            callargs["_c"] = rval
-            if not eval(condition, callargs, None):
-                raise PostconditionViolation("Precondition {0} not met.".format(condition))
-            else:
-                return rval
-        wrapper._covenant_base_func = base_func
-        return wrapper
+            return create_wrapper(func, post=[postcondition])
     return deco
+
+def pre(condition, imports=None):
+    if not imports:
+        imports = {}
+    def deco(func):
+        precondition = Condition(condition, imports)
+        if hasattr(func, "_covenant_base_func"):
+            func._covenant_pre.append(precondition)
+            return func
+        else:
+            return create_wrapper(func, pre=[precondition])
+    return deco
+
+def check_conditions(func, pre, post, args, kwargs):
+    callargs = getcallargs(func, *args, **kwargs)
+    for precondition in pre:
+        eval_globals = callargs.copy()
+        eval_globals.update(precondition.imports)
+        if not eval(precondition.statement, eval_globals, None):
+            raise PreconditionViolation("Precondition {0} not met.".format(precondition.statement))
+    rval = func(*args, **kwargs)
+    for postcondition in post:
+        eval_globals = callargs.copy()
+        eval_globals.update(postcondition.imports)
+        eval_globals["_c"] = rval
+        if not eval(postcondition.statement, eval_globals, None):
+            raise PostconditionViolation("Postcondition {0} not met.".format(postcondition.statement))
+    return rval
