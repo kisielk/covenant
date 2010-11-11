@@ -3,6 +3,23 @@ from functools import wraps
 from collections import namedtuple
 import sys
 
+if __debug__:
+    __ENABLED = True
+else:
+    __ENABLED = False
+
+def disable():
+    """Disable covenant functionality"""
+    __ENABLED = False
+
+def enable():
+    """Enable covenant functionality"""
+    __ENABLED = True
+
+def is_enabled():
+    """Returns True if covenant functionality is enabled"""
+    return __ENABLED
+
 class ContractViolationError(Exception):
     pass
 
@@ -115,31 +132,41 @@ def create_wrapper(func, pre=None, post=None):
     wrapper._covenant_base_func = func
     return wrapper
 
-def post(condition, imports=None):
-    if not imports:
-        imports = {}
-    def deco(func):
-        postcondition = Condition(condition, imports)
-        if hasattr(func, "_covenant_base_func"):
-            func._covenant_post.append(postcondition)
-            return func
-        else:
-            return create_wrapper(func, post=[postcondition])
+def __null_deco(func):
+    """Function decorator that does nothing"""
+    return func
+
+def __create_deco(condition, order, imports):
+    """Create function decorator for pre or post-conditions.
+    order must be either "pre" or "post"
+    """
+    if not __ENABLED:
+        deco = __null_deco
+    else:
+        if not imports:
+            imports = {}
+        def deco(func):
+            cond = Condition(condition, imports)
+            if hasattr(func, "_covenant_base_func"):
+                getattr(func, "_covenant_" + order).append(cond)
+                return func
+            else:
+                wrapper_args = { order : [cond], "func" : func }
+                return create_wrapper(**wrapper_args)
     return deco
+
+def post(condition, imports=None):
+    """Decorate a function with a post-condition"""
+    return __create_deco(condition, "post", imports)
 
 def pre(condition, imports=None):
-    if not imports:
-        imports = {}
-    def deco(func):
-        precondition = Condition(condition, imports)
-        if hasattr(func, "_covenant_base_func"):
-            func._covenant_pre.append(precondition)
-            return func
-        else:
-            return create_wrapper(func, pre=[precondition])
-    return deco
+    """Decorate a function with a pre-condition"""
+    return __create_deco(condition, "pre", imports)
 
 def invariant(condition, imports=None):
+    """Decorate a class with an invariant.
+    The class must be of the InvariantMeta metaclass.
+    """
     if not imports:
         imports = {}
     def deco(cls):
