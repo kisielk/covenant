@@ -139,8 +139,19 @@ def pre(condition, imports=None):
             return create_wrapper(func, pre=[precondition])
     return deco
 
-def check_conditions(func, pre, post, args, kwargs):
-    callargs = getcallargs(func, *args, **kwargs)
+def invariant(condition, imports=None):
+    if not imports:
+        imports = {}
+    def deco(cls):
+        invariant = Condition(condition, imports)
+        if not hasattr(cls, "_covenant_invariants"):
+            raise TypeError("Class {0} is not using the InvariantMeta metaclass")
+        else:
+            cls._covenant_invariants.append(invariant)
+        return cls
+    return deco
+
+def check_preconditions(pre, callargs):
     for precondition in pre:
         eval_globals = callargs.copy()
         eval_globals.update(precondition.imports)
@@ -151,7 +162,8 @@ def check_conditions(func, pre, post, args, kwargs):
             raise PreconditionViolation("Precondition {0} failed with exception {1}".format(statement, e))
         if not cond_result:
             raise PreconditionViolation("Precondition {0} not met.".format(statement))
-    rval = func(*args, **kwargs)
+
+def check_postconditions(post, callargs, rval):
     for postcondition in post:
         eval_globals = callargs.copy()
         eval_globals.update(postcondition.imports)
@@ -163,4 +175,10 @@ def check_conditions(func, pre, post, args, kwargs):
             raise PostconditionViolation("Postcondition {0} failed with exception {1}".format(statement, e))
         if not cond_result:
             raise PostconditionViolation("Postcondition {0} not met.".format(statement))
+
+def check_conditions(func, pre, post, args, kwargs):
+    callargs = getcallargs(func, *args, **kwargs)
+    check_preconditions(pre, callargs)
+    rval = func(*args, **kwargs)
+    check_postconditions(post, callargs, rval)
     return rval
