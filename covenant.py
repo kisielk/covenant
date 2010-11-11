@@ -12,11 +12,7 @@ class PreconditionViolation(ContractViolationError):
 class PostconditionViolation(ContractViolationError):
     pass
 
-class ClassInvariantViolation(ContractViolationError):
-    pass
-
-def invariant(func):
-    """Class invariant decorator generator."""
+class InvariantViolation(ContractViolationError):
     pass
 
 # Note: Taken from Python 2.7's inspect.py
@@ -148,13 +144,23 @@ def check_conditions(func, pre, post, args, kwargs):
     for precondition in pre:
         eval_globals = callargs.copy()
         eval_globals.update(precondition.imports)
-        if not eval(precondition.statement, eval_globals, None):
-            raise PreconditionViolation("Precondition {0} not met.".format(precondition.statement))
+        statement = precondition.statement
+        try:
+            cond_result = eval(statement, eval_globals, None)
+        except Exception, e:
+            raise PreconditionViolation("Precondition {0} failed with exception {1}".format(statement, e))
+        if not cond_result:
+            raise PreconditionViolation("Precondition {0} not met.".format(statement))
     rval = func(*args, **kwargs)
     for postcondition in post:
         eval_globals = callargs.copy()
         eval_globals.update(postcondition.imports)
         eval_globals["_c"] = rval
-        if not eval(postcondition.statement, eval_globals, None):
-            raise PostconditionViolation("Postcondition {0} not met.".format(postcondition.statement))
+        statement = postcondition.statement
+        try:
+            cond_result = eval(statement, eval_globals, None)
+        except Exception, e:
+            raise PostconditionViolation("Postcondition {0} failed with exception {1}".format(statement, e))
+        if not cond_result:
+            raise PostconditionViolation("Postcondition {0} not met.".format(statement))
     return rval

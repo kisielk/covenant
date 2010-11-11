@@ -71,6 +71,14 @@ class PreconditionTests(unittest.TestCase):
         with self.assertRaises(PreconditionViolation):
             foo(1)
 
+    def test_with_exception(self):
+        @pre("float(x)")
+        def foo(x):
+            return x + 1.0
+        self.assertAlmostEqual(foo(1.0), 2.0)
+        with self.assertRaises(PreconditionViolation):
+            foo("abcd")
+
 class PostconditionTest(unittest.TestCase):
     def test_one_postcondition(self):
         @post("_c == 5")
@@ -107,6 +115,13 @@ class PostconditionTest(unittest.TestCase):
             return a*2
         self.assertEqual(foo(2), 4)
 
+    def test_with_exception(self):
+        @post("float(_c)")
+        def foo():
+            return "abcd"
+        with self.assertRaises(PostconditionViolation):
+            foo()
+
 class PostAndPreconditionTests(unittest.TestCase):
     def test_post_and_pre(self):
         @post("_c == a*2")
@@ -116,3 +131,25 @@ class PostAndPreconditionTests(unittest.TestCase):
         self.assertEqual(foo(2), 4)
         with self.assertRaises(PreconditionViolation):
             foo(1)
+
+@unittest.skip("Not implemented yet")
+class InvariantTests(unittest.TestCase):
+    def test_invariant(self):
+        self.skip()
+        @invariant("self.foo >= 0")
+        class Foo(object):
+            def __init__(self):
+                self.foo = 0
+
+            def add(self, num):
+                self.foo += num
+        f = Foo()
+        f.add(5)
+        self.assertEqual(f.foo, 5)
+        with self.assertRaises(InvariantViolation):
+            f.add(-10)
+        self.assertEqual(f.foo, 5)
+        f.foo = -5
+        with self.assertRaises(InvariantViolation):
+            f.add(100)
+        self.assertEqual(f.foo, -5)
