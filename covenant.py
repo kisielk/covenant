@@ -89,16 +89,6 @@ def __create_deco(condition, order, imports):
     return deco
 
 
-def post(condition, imports=None):
-    """Decorate a function with a post-condition"""
-    return __create_deco(condition, "post", imports)
-
-
-def pre(condition, imports=None):
-    """Decorate a function with a pre-condition"""
-    return __create_deco(condition, "pre", imports)
-
-
 def invariant(condition, imports=None):
     """Decorate a class with an invariant.
     The class must be of the InvariantMeta metaclass.
@@ -118,40 +108,25 @@ def invariant(condition, imports=None):
     return deco
 
 
-def check_preconditions(pre, callargs):
-    for precondition in pre:
-        eval_globals = callargs.copy()
-        eval_globals.update(precondition.imports)
-        statement = precondition.statement
-        try:
-            cond_result = eval(statement, eval_globals, None)
-        except Exception as e:
-            raise PreconditionViolation("Precondition {0} failed with "
-                                        "exception {1}".format(statement, e))
-        if not cond_result:
-            raise PreconditionViolation("Precondition {0} not met."
-                                        .format(statement))
+def bind(func):
+    @wraps(func)
+    def bound_func(*args, **kwargs):
+        callargs = getcallargs(func, *args, **kwargs)
+        for arg, arg_value in callargs.items():
+            if arg in func.__annotations__:
+                result = func.__annotations__[arg](arg_value)
+                if not result:
+                    raise AssertionError("Precondition check failed: {0}"
+                                            .format(arg_value))
 
+        value = func(*args, **kwargs)
 
-def check_postconditions(post, callargs, rval):
-    for postcondition in post:
-        eval_globals = callargs.copy()
-        eval_globals.update(postcondition.imports)
-        eval_globals["_c"] = rval
-        statement = postcondition.statement
-        try:
-            cond_result = eval(statement, eval_globals, None)
-        except Exception as e:
-            raise PostconditionViolation("Postcondition {0} failed with "
-                                         "exception {1}".format(statement, e))
-        if not cond_result:
-            raise PostconditionViolation("Postcondition {0} not met."
-                                         .format(statement))
+        if "return" in func.__annotations__:
+            result = func.__annotations__["return"](value)
+            if not result:
+                raise AssertionError("Postcondtion check failed: {0}"
+                                     .format(value))
 
+        return value
 
-def check_conditions(func, pre, post, args, kwargs):
-    callargs = getcallargs(func, *args, **kwargs)
-    check_preconditions(pre, callargs)
-    rval = func(*args, **kwargs)
-    check_postconditions(post, callargs, rval)
-    return rval
+    return bound_func
