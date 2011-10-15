@@ -1,6 +1,5 @@
-from inspect import getcallargs
+from inspect import getcallargs, getargspec, isfunction, getmembers
 from functools import wraps
-from collections import namedtuple
 
 if __debug__:
     __ENABLED = True
@@ -8,107 +7,45 @@ else:
     __ENABLED = False
 
 
-def disable():
-    """Disable covenant functionality"""
-    global __ENABLED
-    __ENABLED = False
+# Keep track of which invariant checks are currently happening so that
+# we don't end up with recursive check issues.
+__INVARIANTS_IN_PROGRESS = set()
 
 
-def enable():
-    """Enable covenant functionality"""
-    global __ENABLED
-    __ENABLED = True
+def __invariant_decorator(condition):
+    def _invariant(cls):
+        for attr_name, attr in getmembers(cls, isfunction):
+            if 'self' in getargspec(attr).args:
+                wrapper = __invariant_wrapper(attr, condition)
+                setattr(cls, attr_name, wrapper)
+
+        return cls
+    return _invariant
 
 
-def is_enabled():
-    """Returns True if covenant functionality is enabled"""
-    return __ENABLED
-
-
-class ContractViolationError(Exception):
-    pass
-
-
-class PreconditionViolation(ContractViolationError):
-    pass
-
-
-class PostconditionViolation(ContractViolationError):
-    pass
-
-
-class InvariantViolation(ContractViolationError):
-    pass
-
-
-Condition = namedtuple("Condition", "statement, imports")
-
-
-def create_wrapper(func, pre=None, post=None):
-    """Create a wrapper for func that will check pre and post conditions."""
-    if not pre:
-        pre = []
-    if not post:
-        post = []
-
-    @wraps(func)
+def __invariant_wrapper(attr, condition):
+    @wraps(attr)
     def wrapper(*args, **kwargs):
-        return check_conditions(func=func, pre=pre, post=post,
-                                args=args, kwargs=kwargs)
+        callargs = getcallargs(attr, *args, **kwargs)
+        inst = callargs['self']
 
-    wrapper._covenant_pre = pre
-    wrapper._covenant_post = post
-    wrapper._covenant_base_func = func
+        value = attr(*args, **kwargs)
+
+        inst_id = id(inst)
+        if not inst_id in __INVARIANTS_IN_PROGRESS:
+            __INVARIANTS_IN_PROGRESS.add(inst_id)
+            result = condition(inst)
+            __INVARIANTS_IN_PROGRESS.remove(inst_id)
+            print("Result: {0}".format(result))
+            if not result:
+                raise AssertionError("Invariant violated.")
+
+        return value
+
     return wrapper
 
 
-def __null_deco(func):
-    """Function decorator that does nothing"""
-    return func
-
-
-def __create_deco(condition, order, imports):
-    """Create function decorator for pre or post-conditions.
-    order must be either "pre" or "post"
-    """
-    if not __ENABLED:
-        deco = __null_deco
-    else:
-        if not imports:
-            imports = {}
-
-        def deco(func):
-            cond = Condition(condition, imports)
-            if hasattr(func, "_covenant_base_func"):
-                getattr(func, "_covenant_" + order).append(cond)
-                return func
-            else:
-                wrapper_args = {order: [cond], "func": func}
-                return create_wrapper(**wrapper_args)
-
-    return deco
-
-
-def invariant(condition, imports=None):
-    """Decorate a class with an invariant.
-    The class must be of the InvariantMeta metaclass.
-    """
-    if not imports:
-        imports = {}
-
-    def deco(cls):
-        invariant = Condition(condition, imports)
-        if not hasattr(cls, "_covenant_invariants"):
-            raise TypeError("Class {0} is not using the "
-                            "InvariantMeta metaclass")
-        else:
-            cls._covenant_invariants.append(invariant)
-        return cls
-
-    return deco
-
-
-def bind(func):
+def __bind_wrapper(func):
     @wraps(func)
     def bound_func(*args, **kwargs):
         callargs = getcallargs(func, *args, **kwargs)
@@ -130,3 +67,39 @@ def bind(func):
         return value
 
     return bound_func
+
+
+def invariant(condition):
+    """Decorate a class with an invariant.
+    The class must be of the InvariantMeta metaclass.
+    """
+    if is_enabled():
+        return __invariant_decorator(condition)
+    else:
+        def null_decorator(cls):
+            return cls
+        return null_decorator
+
+
+def bind(func):
+    if is_enabled:
+        return __bind_wrapper(func)
+    else:
+        return func
+
+
+def disable():
+    """Disable covenant functionality"""
+    global __ENABLED
+    __ENABLED = False
+
+
+def enable():
+    """Enable covenant functionality"""
+    global __ENABLED
+    __ENABLED = True
+
+
+def is_enabled():
+    """Returns True if covenant functionality is enabled"""
+    return __ENABLED
