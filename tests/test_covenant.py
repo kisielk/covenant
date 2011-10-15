@@ -1,5 +1,6 @@
-import unittest2 as unittest
+import unittest
 from covenant import *
+
 
 class PreconditionTests(unittest.TestCase):
     def test_one_precondition(self):
@@ -27,7 +28,7 @@ class PreconditionTests(unittest.TestCase):
         @pre("x > 3")
         def foo(x):
             return x
-        self.assertEqual(foo.__name__, "foo") 
+        self.assertEqual(foo.__name__, "foo")
         self.assertEqual(foo(5), 5)
         with self.assertRaises(PreconditionViolation):
             foo(2)
@@ -39,7 +40,7 @@ class PreconditionTests(unittest.TestCase):
         @pre("x < 8")
         def foo(x, y):
             return x / y
-        self.assertEqual(foo(4,2), 2)
+        self.assertEqual(foo(4, 2), 2)
         with self.assertRaises(PreconditionViolation):
             foo(4, 3)
         with self.assertRaises(PreconditionViolation):
@@ -50,15 +51,17 @@ class PreconditionTests(unittest.TestCase):
         @pre("x < 10")
         @pre("x % 2 == 0")
         def foo(x):
-             return x
+            return x
         self.assertEqual(foo(4), 4)
 
     def test_imports(self):
         def validate(x):
             return x > 5
-        @pre("validate(x)", imports={"validate":validate})
+
+        @pre("validate(x)", imports={"validate": validate})
         def foo(x):
             return x
+
         self.assertEqual(foo(6), 6)
         with self.assertRaises(PreconditionViolation):
             foo(5)
@@ -67,7 +70,7 @@ class PreconditionTests(unittest.TestCase):
         @pre("len(args) > 1")
         def foo(*args):
             return len(args)
-        self.assertEqual(foo(1,2), 2)
+        self.assertEqual(foo(1, 2), 2)
         with self.assertRaises(PreconditionViolation):
             foo(1)
 
@@ -78,6 +81,7 @@ class PreconditionTests(unittest.TestCase):
         self.assertAlmostEqual(foo(1.0), 2.0)
         with self.assertRaises(PreconditionViolation):
             foo("abcd")
+
 
 class PostconditionTest(unittest.TestCase):
     def test_one_postcondition(self):
@@ -97,14 +101,15 @@ class PostconditionTest(unittest.TestCase):
     def test_with_arg(self):
         @post("_c == a*2")
         def foo(a):
-            return a*2
+            return a * 2
         self.assertEqual(foo(2), 4)
 
     def test_two_postconditions(self):
         @post("_c == a*2")
         @post("_c % 2 == 0")
         def foo(a):
-            return a*2
+            return a * 2
+
         self.assertEqual(foo(2), 4)
 
     def test_three_postconditions(self):
@@ -112,7 +117,8 @@ class PostconditionTest(unittest.TestCase):
         @post("_c % 2 == 0")
         @post("True")
         def foo(a):
-            return a*2
+            return a * 2
+
         self.assertEqual(foo(2), 4)
 
     def test_with_exception(self):
@@ -122,20 +128,24 @@ class PostconditionTest(unittest.TestCase):
         with self.assertRaises(PostconditionViolation):
             foo()
 
+
 class PostAndPreconditionTests(unittest.TestCase):
     def test_post_and_pre(self):
         @post("_c == a*2")
         @pre("a > 1")
         def foo(a):
-            return a*2
+            return a * 2
+
         self.assertEqual(foo(2), 4)
         with self.assertRaises(PreconditionViolation):
             foo(1)
+
 
 @unittest.skip("Not implemented yet")
 class InvariantTests(unittest.TestCase):
     def test_invariant(self):
         self.skip()
+
         @invariant("self.foo >= 0")
         class Foo(object):
             def __init__(self):
@@ -153,3 +163,7 @@ class InvariantTests(unittest.TestCase):
         with self.assertRaises(InvariantViolation):
             f.add(100)
         self.assertEqual(f.foo, -5)
+
+
+if __name__ == "__main__":
+    unittest.main()
