@@ -38,6 +38,16 @@ def _invariant_wrapper(attr, condition):
 
 @toggled_decorator_func
 def invariant(condition):
+    """Enforce a class invariant on the decorated class.
+
+    The `condition` must be a callable that takes a class instance as its
+    parameter.
+
+    The invariant will be checked once before an instance method of the class
+    is called and once after. The invariant is *not* checked multiple times
+    within a single call (eg: if the method calls another method).
+
+    """
     def _invariant(cls):
         for attr_name, attr in getmembers(cls, isfunction):
             if 'self' in getargspec(attr).args:

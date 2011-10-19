@@ -8,6 +8,12 @@ from covenant.exceptions import (PreconditionViolationError,
 
 @toggled_decorator_func
 def pre(condition):
+    """Enforce a precondition on the decorated function.
+
+    The `condition` must be a callable that receives the same keyword arguments
+    as the function it's being applied to.
+
+    """
     def _pre(func):
         @wraps(func)
         def wrapped_func(*args, **kwargs):
@@ -24,6 +30,13 @@ def pre(condition):
 
 @toggled_decorator_func
 def post(condition):
+    """Enforce a postcondition on the decorated function.
+
+    The `condition` must be a callable that receives the return value of the
+    function it's being applied to as its first parameter, and the keyword
+    arguments of the function it's applied to as its remaining parameters.
+
+    """
     def _post(func):
         @wraps(func)
         def wrapped_func(*args, **kwargs):

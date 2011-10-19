@@ -8,6 +8,12 @@ from covenant.exceptions import (PreconditionViolationError,
 
 @toggled_decorator
 def constrain(func):
+    """Enforce constraints on a function defined by its annotations.
+
+    Each annotation should be a callable that takes a single parameter and
+    returns a True or False value.
+
+    """
     @wraps(func)
     def wrapped_func(*args, **kwargs):
         callargs = getcallargs(func, *args, **kwargs)
