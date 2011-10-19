@@ -1,4 +1,5 @@
 from functools import wraps
+
 from covenant.base import is_enabled
 
 

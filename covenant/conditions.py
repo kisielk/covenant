@@ -1,6 +1,9 @@
 from inspect import getcallargs
 from functools import wraps
+
 from covenant.util import toggled_decorator_func
+from covenant.exceptions import (PreconditionViolationError,
+                                 PostconditionViolationError)
 
 
 @toggled_decorator_func
@@ -11,7 +14,7 @@ def pre(condition):
             callargs = getcallargs(func, *args, **kwargs)
             result = condition(**callargs)
             if not result:
-                raise AssertionError("Precondition check failed.")
+                raise PreconditionViolationError("Precondition check failed.")
 
             return func(*args, **kwargs)
 
@@ -31,7 +34,7 @@ def post(condition):
             result = condition(value, **callargs)
 
             if not result:
-                raise AssertionError("Precondition check failed.")
+                raise PostconditionViolationError("Precondition check failed.")
 
         return wrapped_func
     return _post

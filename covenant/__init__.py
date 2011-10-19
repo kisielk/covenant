@@ -1,4 +1,5 @@
 import sys
+
 from covenant.base import *
 from covenant.conditions import *
 from covenant.invariant import *

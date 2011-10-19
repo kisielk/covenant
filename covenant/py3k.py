@@ -1,6 +1,9 @@
 from inspect import getcallargs
 from functools import wraps
+
 from covenant.util import toggled_decorator
+from covenant.exceptions import (PreconditionViolationError,
+                                 PostconditionViolationError)
 
 
 @toggled_decorator
@@ -12,16 +15,16 @@ def constrain(func):
             if arg in func.__annotations__:
                 result = func.__annotations__[arg](arg_value)
                 if not result:
-                    raise AssertionError("Precondition check failed: {0}"
-                                            .format(arg_value))
+                    raise PreconditionViolationError(
+                        "Precondition check failed: {0}".format(arg_value))
 
         value = func(*args, **kwargs)
 
         if "return" in func.__annotations__:
             result = func.__annotations__["return"](value)
             if not result:
-                raise AssertionError("Postcondtion check failed: {0}"
-                                     .format(value))
+                raise PostconditionViolationError(
+                    "Postcondtion check failed: {0}" .format(value))
 
         return value
 

@@ -1,11 +1,24 @@
 from inspect import getcallargs, getargspec, isfunction, getmembers
 from functools import wraps
+
 from covenant.util import toggled_decorator_func
+from covenant.exceptions import InvariantViolationError
 
 
 # Keep track of which invariant checks are currently happening so that
 # we don't end up with recursive check issues.
 _INVARIANTS_IN_PROGRESS = set()
+
+
+def _check_invariant(obj, condition):
+    obj_id = id(obj)
+    if not obj_id in _INVARIANTS_IN_PROGRESS:
+        _INVARIANTS_IN_PROGRESS.add(obj_id)
+        result = condition(obj)
+        _INVARIANTS_IN_PROGRESS.remove(obj_id)
+        if not result:
+            raise InvariantViolationError("Invariant violated.")
+
 
 
 def _invariant_wrapper(attr, condition):
@@ -14,15 +27,9 @@ def _invariant_wrapper(attr, condition):
         callargs = getcallargs(attr, *args, **kwargs)
         inst = callargs['self']
 
+        _check_invariant(inst, condition)
         value = attr(*args, **kwargs)
-
-        inst_id = id(inst)
-        if not inst_id in _INVARIANTS_IN_PROGRESS:
-            _INVARIANTS_IN_PROGRESS.add(inst_id)
-            result = condition(inst)
-            _INVARIANTS_IN_PROGRESS.remove(inst_id)
-            if not result:
-                raise AssertionError("Invariant violated.")
+        _check_invariant(inst, condition)
 
         return value
 
