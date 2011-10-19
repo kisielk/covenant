@@ -1,0 +1,28 @@
+from inspect import getcallargs
+from functools import wraps
+from covenant.util import toggled_decorator
+
+
+@toggled_decorator
+def constrain(func):
+    @wraps(func)
+    def wrapped_func(*args, **kwargs):
+        callargs = getcallargs(func, *args, **kwargs)
+        for arg, arg_value in callargs.items():
+            if arg in func.__annotations__:
+                result = func.__annotations__[arg](arg_value)
+                if not result:
+                    raise AssertionError("Precondition check failed: {0}"
+                                            .format(arg_value))
+
+        value = func(*args, **kwargs)
+
+        if "return" in func.__annotations__:
+            result = func.__annotations__["return"](value)
+            if not result:
+                raise AssertionError("Postcondtion check failed: {0}"
+                                     .format(value))
+
+        return value
+
+    return wrapped_func
