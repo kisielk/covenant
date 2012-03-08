@@ -15,15 +15,24 @@ def pre(condition):
 
     """
     def _pre(func):
+        original_func = getattr(func, '_original_func', func)
+
         @wraps(func)
         def wrapped_func(*args, **kwargs):
-            callargs = getcallargs(func, *args, **kwargs)
-            result = condition(**callargs)
+            callargs = getcallargs(original_func, *args, **kwargs)
+
+            try:
+                result = condition(**callargs)
+            except Exception as e:
+                # TODO: Better error message including exception
+                raise PreconditionViolationError("Precondition check failed.")
+
             if not result:
                 raise PreconditionViolationError("Precondition check failed.")
 
             return func(*args, **kwargs)
 
+        wrapped_func._original_func = original_func
         return wrapped_func
     return _pre
 
@@ -38,16 +47,25 @@ def post(condition):
 
     """
     def _post(func):
+        original_func = getattr(func, '_original_func', func)
+
         @wraps(func)
         def wrapped_func(*args, **kwargs):
-            callargs = getcallargs(func, *args, **kwargs)
+            callargs = getcallargs(original_func, *args, **kwargs)
 
             value = func(*args, **kwargs)
 
-            result = condition(value, **callargs)
+            try:
+                result = condition(value, **callargs)
+            except Exception as e:
+                # TODO: Better error message including exception
+                raise PostconditionViolationError("Postcondition check failed.")
 
             if not result:
-                raise PostconditionViolationError("Precondition check failed.")
+                raise PostconditionViolationError("Postcondition check failed.")
 
+            return value
+
+        wrapped_func._original_func = original_func
         return wrapped_func
     return _post

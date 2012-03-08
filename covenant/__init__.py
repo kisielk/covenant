@@ -3,6 +3,5 @@ import sys
 from covenant.base import *
 from covenant.conditions import *
 from covenant.invariant import *
-
-if sys.version_info >= (3, 0):
-    from covenant.annotations import *
+from covenant.exceptions import *
+from covenant.annotations import *
