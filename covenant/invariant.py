@@ -56,3 +56,5 @@ def invariant(condition):
 
         return cls
     return _invariant
+
+__all__ = ["invariant"]

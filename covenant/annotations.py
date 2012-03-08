@@ -35,3 +35,5 @@ def constrain(func):
         return value
 
     return wrapped_func
+
+__all__ = ["constrain"]
