@@ -1,4 +1,0 @@
-syntax: glob
-*.pyo
-*.pyc
-doc/_build
