@@ -17,6 +17,7 @@ setup(name='covenant',
                    'Natural Language :: English',
                    'Operating System :: OS Independent',
                    'Programming Language :: Python :: 3',
+                   'Programming Language :: Python :: 3.2',
                    'Topic :: Software Development :: Libraries',
                    'Topic :: Utilities'],
      )
