@@ -1,5 +1,4 @@
 from inspect import getcallargs
-from functools import wraps
 from decorator import decorator
 
 from covenant.util import toggled_decorator_func
@@ -23,7 +22,7 @@ def pre(condition):
             result = condition(**callargs)
         except Exception as e:
             # TODO: Better error message including exception
-            raise PreconditionViolationError("Precondition check failed.")
+            raise PreconditionViolationError("Precondition check failed: %s" % e)
 
         if not result:
             raise PreconditionViolationError("Precondition check failed.")
@@ -51,7 +50,7 @@ def post(condition):
             result = condition(value, **callargs)
         except Exception as e:
             # TODO: Better error message including exception
-            raise PostconditionViolationError("Postcondition check failed.")
+            raise PostconditionViolationError("Postcondition check failed: %s" % e)
 
         if not result:
             raise PostconditionViolationError("Postcondition check failed.")
