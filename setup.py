@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(name='covenant',
       version='0.1.0',
-      description='Contracts for Python',
+      description='Code contracts for Python 3',
       author='Kamil Kisiel',
       author_email='kamil@kamilkisiel.net',
       url='http://pypi.python.org/pypi/covenant',
