@@ -1,5 +1,6 @@
 from inspect import getcallargs
 from functools import wraps
+from decorator import decorator
 
 from covenant.util import toggled_decorator_func
 from covenant.exceptions import (PreconditionViolationError,
@@ -14,26 +15,20 @@ def pre(condition):
     as the function it's being applied to.
 
     """
-    def _pre(func):
-        original_func = getattr(func, '_original_func', func)
+    @decorator
+    def _pre(func, *args, **kwargs):
+        callargs = getcallargs(func, *args, **kwargs)
 
-        @wraps(func)
-        def wrapped_func(*args, **kwargs):
-            callargs = getcallargs(original_func, *args, **kwargs)
+        try:
+            result = condition(**callargs)
+        except Exception as e:
+            # TODO: Better error message including exception
+            raise PreconditionViolationError("Precondition check failed.")
 
-            try:
-                result = condition(**callargs)
-            except Exception as e:
-                # TODO: Better error message including exception
-                raise PreconditionViolationError("Precondition check failed.")
+        if not result:
+            raise PreconditionViolationError("Precondition check failed.")
 
-            if not result:
-                raise PreconditionViolationError("Precondition check failed.")
-
-            return func(*args, **kwargs)
-
-        wrapped_func._original_func = original_func
-        return wrapped_func
+        return func(*args, **kwargs)
     return _pre
 
 
@@ -46,28 +41,22 @@ def post(condition):
     arguments of the function it's applied to as its remaining parameters.
 
     """
-    def _post(func):
-        original_func = getattr(func, '_original_func', func)
+    @decorator
+    def _post(func, *args, **kwargs):
+        callargs = getcallargs(func, *args, **kwargs)
 
-        @wraps(func)
-        def wrapped_func(*args, **kwargs):
-            callargs = getcallargs(original_func, *args, **kwargs)
+        value = func(*args, **kwargs)
 
-            value = func(*args, **kwargs)
+        try:
+            result = condition(value, **callargs)
+        except Exception as e:
+            # TODO: Better error message including exception
+            raise PostconditionViolationError("Postcondition check failed.")
 
-            try:
-                result = condition(value, **callargs)
-            except Exception as e:
-                # TODO: Better error message including exception
-                raise PostconditionViolationError("Postcondition check failed.")
+        if not result:
+            raise PostconditionViolationError("Postcondition check failed.")
 
-            if not result:
-                raise PostconditionViolationError("Postcondition check failed.")
-
-            return value
-
-        wrapped_func._original_func = original_func
-        return wrapped_func
+        return value
     return _post
 
 __all__ = ["pre", "post"]
